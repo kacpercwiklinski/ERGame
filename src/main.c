@@ -20,21 +20,21 @@ const float SCREEN_WIDTH = 240.0;
 const float SCREEN_HEIGHT = 135.0;
 
 void set_screen_space() {
-    draw_frame.view = m4_make_scale(v3(1.0, 1.0, 1.0));
+    draw_frame.camera_xform = m4_make_scale(v3(1.0, 1.0, 1.0));
     draw_frame.projection = m4_make_orthographic_projection(-1.0f, 1.0f, -1.0f, 1.0f, -1, 10);
     draw_frame.projection = m4_make_orthographic_projection(0.0, SCREEN_WIDTH, 0.0, SCREEN_HEIGHT, -1, 10);
 }
 
 void set_world_space() {
     draw_frame.projection = world_frame->proj;
-    draw_frame.view = world_frame->view;
+    draw_frame.camera_xform = world_frame->view;
 }
 
 Vector2 screen_to_world() {
     float mouse_x = input_frame.mouse_x;
     float mouse_y = input_frame.mouse_y;
     Matrix4 projection = draw_frame.projection;
-    Matrix4 view = draw_frame.view;
+    Matrix4 view = draw_frame.camera_xform;
     float window_width = window.pixel_width;
     float window_height = window.pixel_height;
 
@@ -133,14 +133,14 @@ int entry(int argc, char **argv) {
 
     float zoom = 3.3f;
     Vector2 camera_pos = v2(0, 0);
-    float64 last_time = os_get_current_time_in_seconds();
+    float64 last_time = os_get_elapsed_seconds();
     while (!window.should_close) {
         reset_temporary_storage();
         world_frame_reset();
         reset_debug_statistics();
         os_update();
 
-        float64 now = os_get_current_time_in_seconds();
+        float64 now = os_get_elapsed_seconds();
         float64 delta_time = now - last_time;
         if ((int)now != (int)last_time) {
             log("%.2f FPS\t%.2fms", 1.0 / (delta_time), (delta_time) * 1000);
@@ -153,14 +153,14 @@ int entry(int argc, char **argv) {
         {
             Vector2 target_pos = world_get_player()->position;
             animate_v2_to_target(&camera_pos, target_pos, delta_time, 30.0f);
-            draw_frame.view = m4_make_scale(v3(1.0, 1.0, 1.0));
-            draw_frame.view = m4_mul(draw_frame.view, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0)));
-            draw_frame.view = m4_mul(draw_frame.view, m4_make_scale(v3(1.0 / zoom, 1.0 / zoom, 1.0)));
+            draw_frame.camera_xform = m4_make_scale(v3(1.0, 1.0, 1.0));
+            draw_frame.camera_xform = m4_mul(draw_frame.camera_xform, m4_make_translation(v3(camera_pos.x, camera_pos.y, 0)));
+            draw_frame.camera_xform = m4_mul(draw_frame.camera_xform, m4_make_scale(v3(1.0 / zoom, 1.0 / zoom, 1.0)));
         }
 
         {
             world_frame->proj = draw_frame.projection;
-            world_frame->view = draw_frame.view;
+            world_frame->view = draw_frame.camera_xform;
         }
 
         if (is_key_just_released(KEY_ESCAPE)) {
@@ -359,7 +359,7 @@ int entry(int argc, char **argv) {
                             entity_xform = m4_mul(entity_xform, m4_make_scale(v3(-1.0f, 1.0f, 1.0f)));
                         } else {
                             if (entity->entity_type == ENTITY_TYPE_ITEM) { /* Item wobbling */
-                                entity_xform = m4_translate(entity_xform, v3(entity->position.x - entity_sprite->image->width * 0.5f, entity->position.y + (2 * sin_breathe(os_get_current_time_in_seconds(), 5.0f)), 1.0f));
+                                entity_xform = m4_translate(entity_xform, v3(entity->position.x - entity_sprite->image->width * 0.5f, entity->position.y + (2 * sin_breathe(os_get_elapsed_seconds(), 5.0f)), 1.0f));
                             } else {
                                 entity_xform = m4_translate(entity_xform, v3(entity->position.x - entity_sprite->image->width * 0.5f, entity->position.y, 1.0f));
                             }
